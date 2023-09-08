@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "langchain-async-app-example"
+version = "0.1.0"
+description = ""
+authors = ["Jesús Vélez Santiago <jvelezmagic@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langchain = "^0.0.284"
+openai = "^0.28.0"
+pydantic = "^2.3.0"
+pydantic-settings = "^2.0.3"
+sqlalchemy = "^2.0.20"
+asyncpg = "^0.28.0"
+greenlet = "^2.0.2"
+fastapi = "^0.103.1"
+uvicorn = "^0.23.2"
+pgvector = "^0.2.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
