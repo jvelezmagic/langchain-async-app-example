@@ -14,6 +14,7 @@ from app.chat_memory import ConversationBufferMemoryAsync
 from app.chat_message_history import PostgresChatMessageHistoryAsync
 from app.config import Settings, get_settings
 from app.database import get_session, initialize_database
+from app.vectorstore import PGVectorAsync
 
 
 @asynccontextmanager
@@ -92,3 +93,33 @@ async def chat(
         await memory.save_context(input, {"output": response})
 
     return StreamingResponse(generate_response(), media_type="text/plain")
+
+
+@app.post("/vector")
+async def vector(
+    settings: Settings = Depends(get_settings),
+    session: AsyncSession = Depends(get_session),
+):
+    import openai
+    from langchain.embeddings import OpenAIEmbeddings
+
+    embeddings = OpenAIEmbeddings(
+        openai_api_key=settings.OPENAI_API_KEY,
+        client=openai,
+    )
+
+    vectorstore = await PGVectorAsync.afrom_texts(
+        texts=["The dog is happy.", "The cat is sad.", "I'm really sad."],
+        embedding=embeddings,
+        session=session,
+        pre_delete_collection=True,
+    )
+
+    vectorstore = await PGVectorAsync.afrom_existing_index(
+        session=session,
+        embedding=embeddings,
+    )
+
+    return await vectorstore.asimilarity_search(
+        query="I like happy cats.",
+    )

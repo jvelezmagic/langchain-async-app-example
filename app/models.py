@@ -84,7 +84,7 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
 
 
-class Collection(Base):
+class CollectionStore(Base):
     __tablename__ = "collections"
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -114,15 +114,15 @@ class Collection(Base):
     )
 
     embeddings = relationship(
-        "Embeddings",
+        "EmbeddingStore",
         back_populates="collection",
         lazy="joined",
-        order_by="Embeddings.created_at",
+        order_by="EmbeddingStore.created_at",
         cascade="all, delete-orphan",
     )
 
 
-class Embeddings(Base):
+class EmbeddingStore(Base):
     __tablename__ = "embeddings"
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -136,7 +136,7 @@ class Embeddings(Base):
         nullable=False,
         index=True,
     )
-    embedding: Mapped[list[float]] = mapped_column(
+    embedding: Mapped[Vector] = mapped_column(
         Vector,
         nullable=False,
     )
@@ -165,4 +165,4 @@ class Embeddings(Base):
         server_default=func.now(),
     )
 
-    collection = relationship("Collection", back_populates="embeddings")
+    collection = relationship("CollectionStore", back_populates="embeddings")
