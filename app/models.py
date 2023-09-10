@@ -36,8 +36,6 @@ class Conversation(Base):
     messages = relationship(
         "Message",
         back_populates="conversation",
-        lazy="joined",
-        order_by="Message.created_at",
         cascade="all, delete-orphan",
     )
 
@@ -116,8 +114,6 @@ class CollectionStore(Base):
     embeddings = relationship(
         "EmbeddingStore",
         back_populates="collection",
-        lazy="joined",
-        order_by="EmbeddingStore.created_at",
         cascade="all, delete-orphan",
     )
 

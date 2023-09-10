@@ -1,6 +1,6 @@
 import uuid
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Dict
 
 import sqlalchemy
 from langchain.docstore.document import Document
@@ -30,7 +30,7 @@ class PGVectorAsync(VectorStore):
         session: AsyncSession,
         embedding_function: Embeddings,
         collection_name: str = DEFAULT_COLLECTION_NAME,
-        collection_metadata: dict[Any, Any] | None = None,
+        collection_metadata: Dict[Any, Any] | None = None,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         pre_delete_collection: bool = False,
         relevance_score_fn: Optional[Callable[[float], float]] = None,
@@ -53,7 +53,7 @@ class PGVectorAsync(VectorStore):
         session: AsyncSession,
         embedding_function: Embeddings,
         collection_name: str = DEFAULT_COLLECTION_NAME,
-        collection_metadata: dict[Any, Any] | None = None,
+        collection_metadata: Dict[Any, Any] | None = None,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         pre_delete_collection: bool = False,
         relevance_score_fn: Optional[Callable[[float], float]] = None,
@@ -118,12 +118,12 @@ class PGVectorAsync(VectorStore):
         await self.session.execute(query)
         await self.session.commit()
 
-    async def delete_vectors_by_ids(self, ids: list[uuid.UUID]):
+    async def delete_vectors_by_ids(self, ids: List[uuid.UUID]):
         query = delete(self.EmbeddingStore).where(self.EmbeddingStore.id.in_(ids))
         await self.session.execute(query)
         await self.session.commit()
 
-    async def delete_vectors_by_custom_ids(self, custom_ids: list[str]):
+    async def delete_vectors_by_custom_ids(self, custom_ids: List[str]):
         query = delete(self.EmbeddingStore).where(
             self.EmbeddingStore.custom_id.in_(custom_ids)
         )
@@ -134,11 +134,11 @@ class PGVectorAsync(VectorStore):
     async def __from(
         cls,
         texts: Iterable[str],
-        embeddings: list[list[float]],
+        embeddings: List[List[float]],
         embedding: Embeddings,
         session: AsyncSession,
-        metadatas: Optional[list[dict[Any, Any]]] = None,
-        ids: Optional[list[str]] = None,
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        ids: Optional[List[str]] = None,
         collection_name: str = DEFAULT_COLLECTION_NAME,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         pre_delete_collection: bool = False,
@@ -172,11 +172,11 @@ class PGVectorAsync(VectorStore):
     async def aadd_embeddings(
         self,
         texts: Iterable[str],
-        embeddings: list[list[float]],
-        metadatas: Optional[list[dict[Any, Any]]] = None,
-        ids: Optional[list[str]] = None,
+        embeddings: List[List[float]],
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        ids: Optional[List[str]] = None,
         **kwargs: Any,
-    ) -> list[str]:
+    ) -> List[str]:
         if ids is None:
             ids = [str(uuid.uuid4()) for _ in texts]
 
@@ -191,11 +191,11 @@ class PGVectorAsync(VectorStore):
         for texts, embedding, metadata, id in zip(texts, embeddings, metadatas, ids):
             self.session.add(
                 self.EmbeddingStore(
-                    document=texts,
-                    embedding=embedding,
-                    metadata=metadata,
-                    id=id,
                     collection_id=collection.id,
+                    embedding=embedding,
+                    document=texts,
+                    cmetadata=metadata,
+                    custom_id=id,
                 )
             )
 
@@ -206,7 +206,7 @@ class PGVectorAsync(VectorStore):
     async def aadd_texts(
         self,
         texts: Iterable[str],
-        metadatas: Optional[List[dict[Any, Any]]] = None,
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
@@ -221,10 +221,10 @@ class PGVectorAsync(VectorStore):
     @classmethod
     async def afrom_documents(
         cls,
-        documents: list[Document],
+        documents: List[Document],
         embedding: Embeddings,
-        metadatas: Optional[list[dict[Any, Any]]] = None,
-        ids: Optional[list[str]] = None,
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        ids: Optional[List[str]] = None,
         collection_name: str = DEFAULT_COLLECTION_NAME,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         pre_delete_collection: bool = False,
@@ -247,24 +247,25 @@ class PGVectorAsync(VectorStore):
     @classmethod
     async def afrom_texts(
         cls,
-        texts: list[str],
+        texts: List[str],
         embedding: Embeddings,
-        session: AsyncSession,
-        metadatas: Optional[list[dict[Any, Any]]] = None,
-        ids: Optional[list[str]] = None,
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        ids: Optional[List[str]] = None,
         collection_name: str = DEFAULT_COLLECTION_NAME,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         pre_delete_collection: bool = False,
         **kwargs: Any,
     ):
+        session = cls.__get_session_from_kwargs(kwargs)
+
         embeddings = await embedding.aembed_documents(texts)
 
         return await cls.__from(
-            session=session,
             texts=texts,
             embeddings=embeddings,
             embedding=embedding,
             metadatas=metadatas,
+            session=session,
             ids=ids,
             collection_name=collection_name,
             distance_strategy=distance_strategy,
@@ -273,17 +274,29 @@ class PGVectorAsync(VectorStore):
         )
 
     @classmethod
+    def __get_session_from_kwargs(cls, kwargs: Dict[Any, Any]) -> AsyncSession:
+        session = kwargs.pop("session", None)
+        if session is None:
+            raise ValueError("A session must be provided")
+
+        if not isinstance(session, AsyncSession):
+            raise ValueError("A session must be an AsyncSession")
+
+        return session
+
+    @classmethod
     async def afrom_embeddings(
         cls,
-        text_embeddings: list[tuple[str, list[float]]],
+        text_embeddings: List[tuple[str, List[float]]],
         embedding: Embeddings,
-        metadatas: Optional[list[dict[Any, Any]]] = None,
-        ids: Optional[list[str]] = None,
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        ids: Optional[List[str]] = None,
         collection_name: str = DEFAULT_COLLECTION_NAME,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         pre_delete_collection: bool = False,
         **kwargs: Any,
     ):
+        session = cls.__get_session_from_kwargs(kwargs)
         texts = [text_embedding[0] for text_embedding in text_embeddings]
         embeddings = [text_embedding[1] for text_embedding in text_embeddings]
 
@@ -292,6 +305,7 @@ class PGVectorAsync(VectorStore):
             embeddings=embeddings,
             embedding=embedding,
             metadatas=metadatas,
+            session=session,
             ids=ids,
             collection_name=collection_name,
             distance_strategy=distance_strategy,
@@ -339,7 +353,7 @@ class PGVectorAsync(VectorStore):
         self,
         query: str,
         k: int = 4,
-        filter: Optional[dict[Any, Any]] = None,
+        filter: Optional[Dict[Any, Any]] = None,
         **kwargs: Any,
     ) -> List[Document]:
         embedding = await self.embedding_function.aembed_query(query)
@@ -353,7 +367,7 @@ class PGVectorAsync(VectorStore):
         self,
         embedding: List[float],
         k: int = 4,
-        filter: Optional[dict[Any, Any]] = None,
+        filter: Optional[Dict[Any, Any]] = None,
         **kwargs: Any,
     ) -> List[Document]:
         docs_and_scores = await self.asimilarity_search_with_score_by_vector(
@@ -368,7 +382,7 @@ class PGVectorAsync(VectorStore):
         self,
         embedding: List[float],
         k: int = 4,
-        filter: Optional[dict[Any, Any]] = None,
+        filter: Optional[Dict[Any, Any]] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
         collection = await self.get_collection()
@@ -414,6 +428,9 @@ class PGVectorAsync(VectorStore):
             (
                 Document(
                     page_content=result.EmbeddingStore.document,
+                    metadata=result.EmbeddingStore.cmetadata
+                    if result.EmbeddingStore.cmetadata
+                    else {},
                 ),
                 result.distance if self.embedding_function is not None else None,
             )
@@ -452,11 +469,28 @@ class PGVectorAsync(VectorStore):
             "Consider providing relevance_score_fn to PGVector constructor."
         )
 
-    def add_texts(self):
+    def add_texts(
+        self,
+        texts: Iterable[str],
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
         raise NotImplementedError
 
-    def from_texts(self):
+    @classmethod
+    def from_texts(
+        cls,
+        texts: List[str],
+        embedding: Embeddings,
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
+        **kwargs: Any,
+    ) -> "PGVectorAsync":
         raise NotImplementedError
 
-    def similarity_search(self):
+    def similarity_search(
+        self,
+        query: str,
+        k: int = 4,
+        **kwargs: Any,
+    ) -> List[Document]:
         raise NotImplementedError

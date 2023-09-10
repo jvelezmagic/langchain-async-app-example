@@ -1,9 +1,11 @@
 import uuid
 from contextlib import asynccontextmanager
 
+import openai
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 from langchain.chat_models import ChatOpenAI
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable import RunnableMap
@@ -100,20 +102,17 @@ async def vector(
     settings: Settings = Depends(get_settings),
     session: AsyncSession = Depends(get_session),
 ):
-    import openai
-    from langchain.embeddings import OpenAIEmbeddings
-
     embeddings = OpenAIEmbeddings(
         openai_api_key=settings.OPENAI_API_KEY,
         client=openai,
     )
 
-    vectorstore = await PGVectorAsync.afrom_texts(
-        texts=["The dog is happy.", "The cat is sad.", "I'm really sad."],
-        embedding=embeddings,
-        session=session,
-        pre_delete_collection=True,
-    )
+    # vectorstore = await PGVectorAsync.afrom_texts(
+    #     texts=["The dog is happy.", "The cat is sad.", "I'm really sad."],
+    #     embedding=embeddings,
+    #     session=session,
+    #     pre_delete_collection=True,
+    # )
 
     vectorstore = await PGVectorAsync.afrom_existing_index(
         session=session,
