@@ -7,7 +7,6 @@ from fastapi.responses import StreamingResponse
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.schema import StrOutputParser
 from langchain.schema.runnable import RunnableMap
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,7 +81,6 @@ async def chat(
         }
         | prompt
         | model
-        | StrOutputParser()
     )
 
     async def generate_response():
@@ -90,8 +88,8 @@ async def chat(
 
         response = ""
         async for token in chain.astream(input=input):
-            yield token
-            response += token
+            yield token.content
+            response += token.content
         await memory.save_context(input, {"output": response})
 
     return StreamingResponse(generate_response(), media_type="text/plain")
