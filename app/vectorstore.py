@@ -408,7 +408,6 @@ class PGVectorAsync(VectorStore):
         if filter is not None:
             filter_clauses: list[Any] = []
             for key, value in filter.items():
-                print(key, value)
                 IN = "in"
                 if isinstance(value, dict) and IN in map(str.lower, value):
                     value_case_insensitive = {k.lower(): v for k, v in value.items()}
