@@ -107,8 +107,23 @@ async def vector(
         client=openai,
     )
 
-    # vectorstore = await PGVectorAsync.afrom_texts(
-    #     texts=["The dog is happy.", "The cat is sad.", "I'm really sad."],
+    # from langchain.schema import Document
+
+    # vectorstore = await PGVectorAsync.afrom_documents(
+    #     documents=[
+    #         Document(
+    #             page_content="The dog is happy.",
+    #             metadata={"status": "happy", "isExample": False},
+    #         ),
+    #         Document(
+    #             page_content="The cat is sad.",
+    #             metadata={"status": "sad", "isExample": False},
+    #         ),
+    #         Document(
+    #             page_content="I'm really sad.",
+    #             metadata={"status": "sad", "isExample": True},
+    #         ),
+    #     ],
     #     embedding=embeddings,
     #     session=session,
     #     pre_delete_collection=True,
@@ -119,6 +134,10 @@ async def vector(
         embedding=embeddings,
     )
 
-    return await vectorstore.asimilarity_search_with_score(
+    return await vectorstore.asimilarity_search(
         query="I like happy cats.",
+        filter={
+            "status": {"in": ["sad"]},
+            "isExample": True,
+        },
     )

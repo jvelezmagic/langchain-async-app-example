@@ -1,6 +1,6 @@
 import uuid
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Dict
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 import sqlalchemy
 from langchain.docstore.document import Document
@@ -406,19 +406,28 @@ class PGVectorAsync(VectorStore):
         filter_by = self.EmbeddingStore.collection_id == collection.id
 
         if filter is not None:
-            filter_clauses = []
+            filter_clauses: list[Any] = []
             for key, value in filter.items():
+                print(key, value)
                 IN = "in"
                 if isinstance(value, dict) and IN in map(str.lower, value):
                     value_case_insensitive = {k.lower(): v for k, v in value.items()}
-                    filter_by_metadata = self.EmbeddingStore.cmetadata[key].astext.in_(
-                        value_case_insensitive[IN]
+                    filter_by_metadata = (
+                        self.EmbeddingStore.cmetadata[key]
+                        .as_string()
+                        .in_(value_case_insensitive[IN])
                     )
                     filter_clauses.append(filter_by_metadata)
                 else:
-                    filter_by_metadata = self.EmbeddingStore.cmetadata[
-                        key
-                    ].astext == str(value)
+                    if isinstance(value, bool):
+                        filter_by_metadata = (
+                            self.EmbeddingStore.cmetadata[key].as_boolean() == value
+                        )
+                    else:
+                        filter_by_metadata = self.EmbeddingStore.cmetadata[
+                            key
+                        ].as_string() == str(value)
+
                     filter_clauses.append(filter_by_metadata)
 
             filter_by = sqlalchemy.and_(filter_by, *filter_clauses)
@@ -428,7 +437,7 @@ class PGVectorAsync(VectorStore):
                 self.EmbeddingStore, self.distance_strategy(embedding).label("distance")
             )
             .filter(filter_by)
-            .order_by(sqlalchemy.asc("distance"))
+            .order_by("distance")
             .join(
                 self.CollectionStore,
                 self.EmbeddingStore.collection_id == self.CollectionStore.id,

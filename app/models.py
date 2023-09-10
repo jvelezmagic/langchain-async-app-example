@@ -3,7 +3,8 @@ import uuid
 from typing import Any, Dict
 
 from pgvector.sqlalchemy import Vector  # type: ignore
-from sqlalchemy import JSON, UUID, DateTime, ForeignKey, Text, func
+from sqlalchemy import UUID, DateTime, ForeignKey, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -62,7 +63,7 @@ class Message(Base):
         nullable=False,
     )
     additional_kwargs: Mapped[Dict[Any, Any]] = mapped_column(
-        JSON,
+        JSONB,
         nullable=True,
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -94,7 +95,7 @@ class CollectionStore(Base):
         nullable=False,
     )
     cmetadata: Mapped[Dict[Any, Any]] = mapped_column(
-        JSON,
+        JSONB,
         nullable=True,
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -141,7 +142,7 @@ class EmbeddingStore(Base):
         nullable=False,
     )
     cmetadata: Mapped[Dict[Any, Any]] = mapped_column(
-        JSON,
+        JSONB,
         nullable=True,
     )
     custom_id: Mapped[str] = mapped_column(
