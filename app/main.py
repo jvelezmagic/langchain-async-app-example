@@ -119,6 +119,6 @@ async def vector(
         embedding=embeddings,
     )
 
-    return await vectorstore.asimilarity_search(
+    return await vectorstore.asimilarity_search_with_score(
         query="I like happy cats.",
     )

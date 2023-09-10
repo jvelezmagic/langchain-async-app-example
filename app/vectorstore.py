@@ -363,6 +363,20 @@ class PGVectorAsync(VectorStore):
             filter=filter,
         )
 
+    async def asimilarity_search_with_score(
+        self,
+        query: str,
+        k: int = 4,
+        filter: Optional[Dict[Any, Any]] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        embedding = await self.embedding_function.aembed_query(query)
+        return await self.asimilarity_search_with_score_by_vector(
+            embedding=embedding,
+            k=k,
+            filter=filter,
+        )
+
     async def asimilarity_search_by_vector(
         self,
         embedding: List[float],
