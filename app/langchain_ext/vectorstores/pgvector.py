@@ -127,7 +127,9 @@ class PGVectorAsync(VectorStore):
         if ids is None:
             return
 
-        query = delete(self.EmbeddingStore).where(self.EmbeddingStore.id.in_(ids))
+        query = delete(self.EmbeddingStore).where(
+            self.EmbeddingStore.custom_id.in_(ids)
+        )
         await self.session.execute(query)
         await self.session.commit()
 
