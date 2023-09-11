@@ -6,9 +6,10 @@ import sqlalchemy
 from langchain.docstore.document import Document
 from langchain.embeddings.base import Embeddings
 from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from .base import VectorStore
 
 
 class DistanceStrategy(str, Enum):
@@ -115,6 +116,18 @@ class PGVectorAsync(VectorStore):
         query = delete(self.CollectionStore).where(
             self.CollectionStore.name == self.collection_name
         )
+        await self.session.execute(query)
+        await self.session.commit()
+
+    async def adelete(
+        self,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ):
+        if ids is None:
+            return
+
+        query = delete(self.EmbeddingStore).where(self.EmbeddingStore.id.in_(ids))
         await self.session.execute(query)
         await self.session.commit()
 

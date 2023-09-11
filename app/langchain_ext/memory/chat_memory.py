@@ -6,7 +6,7 @@ from langchain.memory.utils import get_prompt_input_key
 from langchain.pydantic_v1 import Field
 from langchain.schema.messages import BaseMessage, get_buffer_string
 
-from app.chat_message_history import BaseChatMessageHistoryAsync
+from .chat_message_history import BaseChatMessageHistoryAsync
 
 
 class BaseMemoryAsync(Serializable, ABC):

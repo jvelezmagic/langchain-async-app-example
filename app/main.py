@@ -7,20 +7,69 @@ from fastapi.responses import StreamingResponse
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.schema import Document
 from langchain.schema.runnable import RunnableMap
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chat_memory import ConversationBufferMemoryAsync
-from app.chat_message_history import PostgresChatMessageHistoryAsync
 from app.config import Settings, get_settings
-from app.database import get_session, initialize_database
-from app.vectorstore import PGVectorAsync
+from app.database import async_session, engine, get_session, initialize_database
+from app.langchain_ext.indexes.index import index_async
+from app.langchain_ext.indexes.record_manager import SQLRecordManagerAsync
+from app.langchain_ext.memory.chat_memory import ConversationBufferMemoryAsync
+from app.langchain_ext.memory.chat_message_history import (
+    PostgresChatMessageHistoryAsync,
+)
+from app.langchain_ext.vectorstores.pgvector import PGVectorAsync
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await initialize_database()
+
+    record_manager = SQLRecordManagerAsync(
+        namespace="testing",
+        engine=engine,
+    )
+
+    await record_manager.create_schema()
+
+    embeddings = OpenAIEmbeddings(
+        openai_api_key=settings.OPENAI_API_KEY,
+        client=openai,
+    )
+
+    async with async_session() as session:
+        vectorstore = await PGVectorAsync.afrom_existing_index(
+            session=session,
+            embedding=embeddings,
+        )
+
+        docs = [
+            Document(
+                page_content="The dog is happy.",
+                metadata={"status": "happy", "isExample": False, "source_id": "1"},
+            ),
+            Document(
+                page_content="The cat is sad.",
+                metadata={"status": "sad", "isExample": False, "source_id": "2"},
+            ),
+            Document(
+                page_content="I'm really sad.",
+                metadata={"status": "sad", "isExample": True, "source_id": "3"},
+            ),
+        ]
+
+        result = await index_async(
+            docs_source=docs,
+            record_manager=record_manager,
+            vector_store=vectorstore,
+            cleanup="incremental",
+            source_id_key="source_id",
+        )
+
+        print(result)
+
     yield
 
 
@@ -104,28 +153,6 @@ async def vector(
         openai_api_key=settings.OPENAI_API_KEY,
         client=openai,
     )
-
-    # from langchain.schema import Document
-
-    # vectorstore = await PGVectorAsync.afrom_documents(
-    #     documents=[
-    #         Document(
-    #             page_content="The dog is happy.",
-    #             metadata={"status": "happy", "isExample": False},
-    #         ),
-    #         Document(
-    #             page_content="The cat is sad.",
-    #             metadata={"status": "sad", "isExample": False},
-    #         ),
-    #         Document(
-    #             page_content="I'm really sad.",
-    #             metadata={"status": "sad", "isExample": True},
-    #         ),
-    #     ],
-    #     embedding=embeddings,
-    #     session=session,
-    #     pre_delete_collection=True,
-    # )
 
     vectorstore = await PGVectorAsync.afrom_existing_index(
         session=session,
