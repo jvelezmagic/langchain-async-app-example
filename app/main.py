@@ -40,6 +40,11 @@ async def lifespan(app: FastAPI):
     )
 
     async with async_session() as session:
+        await PGVectorAsync.create(
+            session=session,
+            embedding_function=embeddings,
+        )
+
         vectorstore = await PGVectorAsync.afrom_existing_index(
             session=session,
             embedding=embeddings,
