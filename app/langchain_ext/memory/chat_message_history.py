@@ -129,6 +129,8 @@ class PostgresChatMessageHistoryAsync(BaseChatMessageHistoryAsync):
 
     async def clear(self) -> None:
         """Clear session memory from PostgreSQL"""
-        query = delete(Message).where(Message.conversation_id == self.conversation_id)
+        query = delete(Conversation).where(
+            Message.conversation_id == self.conversation_id
+        )
         await self.session.execute(query)
         await self.session.commit()
