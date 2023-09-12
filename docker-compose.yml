@@ -1,0 +1,15 @@
+version: '3'
+services:
+  db:
+    image: ankane/pgvector:v0.5.0
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+volumes:
+  postgres_data:

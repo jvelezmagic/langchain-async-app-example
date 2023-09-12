@@ -8,8 +8,6 @@ from app.models import Base
 
 settings = get_settings()
 
-# engine = create_async_engine(settings.DATABASE_URL, echo=True, future=True)
-
 engine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
@@ -31,6 +29,8 @@ async_session = async_sessionmaker(
 async def initialize_database():
     """Initialize the database."""
     async with engine.begin() as conn:
+        # uuid-ossp is needed for the UUID type
+        await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         # await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
