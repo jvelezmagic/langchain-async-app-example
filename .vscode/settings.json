@@ -1,6 +1,7 @@
 {
     "conventionalCommits.scopes": [
         "vectorstore",
-        "index"
+        "index",
+        "local-dev"
     ]
 }
